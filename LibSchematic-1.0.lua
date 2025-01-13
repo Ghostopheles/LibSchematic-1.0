@@ -349,11 +349,11 @@ end
 --- CONTEXT
 
 ---@class LibSchematicContext
----@field Nodes LibSchematicNode[]
----@field Canvas LibSchematicRuntimeNode[]
----@field EventGraph LibSchematicRuntimeNode[]
----@field EntryPoint LibSchematicRuntimeNode
----@field ExitPoint LibSchematicRuntimeNode
+---@field private Nodes LibSchematicNode[]
+---@field private Canvas LibSchematicRuntimeNode[]
+---@field private EventGraph LibSchematicRuntimeNode[]
+---@field private EntryPoint LibSchematicRuntimeNode
+---@field private ExitPoint LibSchematicRuntimeNode
 local Context = {
     Nodes = {}, -- the function library
     Canvas = {},  -- all created runtime nodes
@@ -449,43 +449,3 @@ end
 function LibSchematic.GetContextByName(contextName)
     return Contexts[contextName];
 end
-
---[[ example usage
-
--- pre-runtime setup
-
--- define context
-local Context = LibSchematic.CreateContext("MyContext");
-
-do -- define a Multiply function
-    local function Multiply(a, b)
-        return a * b;
-    end
-    local node = Context:DefineNode("Multiply", Multiply);
-    node:SetStatic(true);
-
-    node:CreateInput("A", "number");
-    node:CreateInput("B", "number");
-    node:CreateOutput("Result", "number");
-end
-
---- runtime
-
--- when the user drags a node onto the canvas
-local runtimeNodeA = Context:CreateRuntimeNodeByName("Multiply");
-local runtimeNodeB = Context:CreateRuntimeNodeByName("Multiply");
-
--- when the user connects a node to another
-Context:CreateLink(runtimeNodeA, runtimeNodeB);
-
--- when the user connects an output to an input
-local outputIndex = 1;
-local inputIndex = 1;
-local output = runtimeNodeA:GetOutputs()[outputIndex];
-local input = runtimeNodeB:GetInputs()[inputIndex];
-Context:CreateIOLink(output, input);
-
--- when it's time to evaluate
-local results = Context:Eval();
-]]
-
