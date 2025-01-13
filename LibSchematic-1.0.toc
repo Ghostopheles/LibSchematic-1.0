@@ -1,0 +1,14 @@
+## Interface: 110100
+## Title: Lib: LibSchematic
+## Notes: A cadaverous visual scripting framework
+## Author: Ghostopheles
+## Version: @project-version@
+## IconAtlas: minortalents-icon-book
+
+## OptionalDeps: LibStub
+
+## X-License: Public Domain
+## X-Category: Library
+
+LibStub/LibStub.lua
+LibSchematic-1.0.lua

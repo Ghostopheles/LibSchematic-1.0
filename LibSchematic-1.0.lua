@@ -1,0 +1,491 @@
+assert(LibStub, "LibStub not found.");
+
+---@alias LibSchematic-1.0 LibSchematic
+local major, minor = "LibSchematic-1.0", 1;
+
+---@class LibSchematic
+local LibSchematic = LibStub:NewLibrary(major, minor);
+
+if not LibSchematic then
+    return;
+end
+
+local function CreateObject(object, ...)
+    return CreateAndInitFromMixin(object, ...);
+end
+
+------------
+--- INPUTS AND OUTPUTS
+
+---@class LibSchematicNodeInput
+local NodeInput = {};
+
+function NodeInput:Init() end;
+
+---@param name string
+function NodeInput:SetName(name)
+    self.Name = name;
+end
+
+---@return string name
+function NodeInput:GetName()
+    return self.Name;
+end
+
+---@param type type
+function NodeInput:SetType(type)
+    self.Type = type;
+end
+
+---@return type
+function NodeInput:GetType()
+    return self.Type;
+end
+
+---@param isRequired boolean
+function NodeInput:SetRequired(isRequired)
+    self.Required = isRequired;
+end
+
+---@return boolean isRequired
+function NodeInput:IsRequired()
+    return self.Required;
+end
+
+------
+
+---@class LibSchematicRuntimeNodeInput
+local RuntimeNodeInput = {};
+
+---@param parent LibSchematicNodeInput
+function RuntimeNodeInput:Init(parent)
+    self:SetParent(parent);
+end
+
+---@param parentNodeInput LibSchematicNodeInput
+function RuntimeNodeInput:SetParent(parentNodeInput)
+    self.Parent = parentNodeInput;
+end
+
+---@return LibSchematicNodeInput
+function RuntimeNodeInput:GetParent()
+    return self.Parent;
+end
+
+---@param output LibSchematicRuntimeNodeOutput
+function RuntimeNodeInput:SetSource(output)
+    self.Source = output;
+end
+
+---@return LibSchematicRuntimeNodeOutput?
+function RuntimeNodeInput:GetSource()
+    return self.Source;
+end
+
+function RuntimeNodeInput:SetValue(value)
+    self.Value = value;
+end
+
+function RuntimeNodeInput:GetValue()
+    return self.Value;
+end
+
+------------
+
+---@class LibSchematicNodeOutput
+local NodeOutput = {};
+
+function NodeOutput:Init() end;
+
+---@param name string
+function NodeOutput:SetName(name)
+    self.Name = name;
+end
+
+---@return string name
+function NodeOutput:GetName()
+    return self.Name;
+end
+
+---@param type type
+function NodeOutput:SetType(type)
+    self.Type = type;
+end
+
+---@return type
+function NodeOutput:GetType()
+    return self.Type;
+end
+
+------
+
+---@class LibSchematicRuntimeNodeOutput
+local RuntimeNodeOutput = {
+    Destinations = {}
+};
+
+---@param parent LibSchematicNodeOutput
+function RuntimeNodeOutput:Init(parent)
+    self:SetParent(parent);
+end
+
+---@param parentNodeInput LibSchematicNodeOutput
+function RuntimeNodeOutput:SetParent(parentNodeInput)
+    self.Parent = parentNodeInput;
+end
+
+---@return LibSchematicNodeOutput
+function RuntimeNodeOutput:GetParent()
+    return self.Parent;
+end
+
+---@param input LibSchematicRuntimeNodeInput
+function RuntimeNodeOutput:AddDestination(input)
+    tinsert(self.Destinations, input);
+end
+
+function RuntimeNodeOutput:SetValue(value)
+    self.Value = value;
+end
+
+function RuntimeNodeOutput:GetValue()
+    return self.Value;
+end
+
+------------
+--- NODE
+
+---@class LibSchematicNode
+local Node = {
+    Inputs = {},
+    Outputs = {},
+    Static = false,
+};
+
+---@param context LibSchematicContext
+function Node:Init(context)
+    self:SetContext(context);
+end
+
+---@return LibSchematicContext
+function Node:GetContext()
+    return self.Context;
+end
+
+---@param context LibSchematicContext
+function Node:SetContext(context)
+    self.Context = context;
+end
+
+---@param isUserCreateable boolean
+function Node:SetUserCreateable(isUserCreateable)
+    self.UserCreateable = isUserCreateable;
+end
+
+---@return boolean isUserCreateable
+function Node:IsUserCreateable()
+    return self.UserCreateable;
+end
+
+---@return string name
+function Node:GetName()
+    return self.Name;
+end
+
+---@param name string
+function Node:SetName(name)
+    self.Name = name;
+end
+
+---@return function
+function Node:GetClosure()
+    return self.Closure;
+end
+
+---@param closure function
+function Node:SetClosure(closure)
+    self.Closure = closure;
+end
+
+---@param input LibSchematicNodeInput
+function Node:AddInput(input)
+    tinsert(self.Inputs, input);
+end
+
+---@return LibSchematicNodeInput[]
+function Node:GetInputs()
+    return self.Inputs;
+end
+
+---@param output LibSchematicNodeOutput
+function Node:AddOutput(output)
+    tinsert(self.Outputs, output);
+end
+
+---@return LibSchematicNodeOutput[]
+function Node:GetOutputs()
+    return self.Outputs;
+end
+
+---@param isStatic boolean
+function Node:SetStatic(isStatic)
+    self.Static = isStatic;
+end
+
+---@return boolean isStatic
+function Node:IsStatic()
+    return self.Static;
+end
+
+------------
+--- RUNTIME NODE
+
+---@class LibSchematicRuntimeNode
+---@field Inputs LibSchematicRuntimeNodeInput[]
+---@field Outputs LibSchematicRuntimeNodeOutput[]
+local RuntimeNode = {
+    Inputs = {},
+    Outputs = {}
+};
+
+---@param parentNode LibSchematicNode
+function RuntimeNode:Init(parentNode)
+    self:SetParent(parentNode);
+
+    -- populate inputs and outputs with runtime equivalents
+    for _, input in ipairs(parentNode:GetInputs()) do
+        local runtimeInput = CreateObject(RuntimeNodeInput, input);
+        tinsert(self.Inputs, runtimeInput);
+    end
+
+    for _, output in ipairs(parentNode:GetInputs()) do
+        local runtimeOutput = CreateObject(RuntimeNodeOutput, output);
+        tinsert(self.Outputs, runtimeOutput);
+    end
+end
+
+---@param parentNode LibSchematicNode
+function RuntimeNode:SetParent(parentNode)
+    self.ParentNode = parentNode;
+end
+
+---@return LibSchematicNode
+function RuntimeNode:GetParent()
+    return self.ParentNode;
+end
+
+---@param inputIndex number
+function RuntimeNode:GetInput(inputIndex)
+    return self.Inputs[inputIndex];
+end
+
+---@param outputIndex number
+function RuntimeNode:GetOutput(outputIndex)
+    return self.Outputs[outputIndex];
+end
+
+function RuntimeNode:Eval()
+    local parent = self.ParentNode;
+    local closure = parent:GetClosure();
+    local results;
+
+    -- collect inputs
+    local inputs = {};
+    for _, input in ipairs(self.Inputs) do
+        local value;
+        local source = input:GetSource();
+        if source then
+            value = source:GetValue();
+        else
+            value = input:GetValue();
+        end
+        tinsert(inputs, value);
+    end
+
+    -- evaluate
+    if parent:IsStatic() then
+        results = {closure(unpack(inputs))};
+    else
+        local context = parent:GetContext();
+        results = {closure(context, unpack(inputs))};
+    end
+
+    -- set the value of our outputs
+    local numOutputs = #self.Outputs;
+    if numOutputs > 0 then
+        for i=1, numOutputs do
+            local output = self.Outputs[i];
+            output:SetValue(results[i]);
+        end
+    end
+
+    return results;
+end
+
+----- runtime flow
+
+---@param node LibSchematicRuntimeNode
+function RuntimeNode:SetInNode(node)
+    self.InNode = node;
+end
+
+---@return LibSchematicRuntimeNode?
+function RuntimeNode:GetInNode()
+    return self.InNode;
+end
+
+---@param node LibSchematicRuntimeNode
+function RuntimeNode:SetOutNode(node)
+    assert(node ~= self.InNode, "Please do not recurse infinitely.");
+    self.OutNode = node;
+end
+
+---@return LibSchematicRuntimeNode?
+function RuntimeNode:GetOutNode()
+    return self.OutNode;
+end
+
+------------
+--- CONTEXT
+
+---@class LibSchematicContext
+---@field Nodes LibSchematicNode[]
+---@field Canvas LibSchematicRuntimeNode[]
+---@field EventGraph LibSchematicRuntimeNode[]
+---@field EntryPoint LibSchematicRuntimeNode
+---@field ExitPoint LibSchematicRuntimeNode
+local Context = {
+    Nodes = {}, -- the function library
+    Canvas = {},  -- all created runtime nodes
+    EventGraph = {} -- all runtime nodes in order of execution
+};
+
+---@param name string
+function Context:Init(name)
+    self:SetName(name);
+    self:DefineStaticPoints();
+end
+
+---@return string name
+function Context:GetName()
+    return self.Name;
+end
+
+---@param name string
+function Context:SetName(name)
+    self.Name = name;
+end
+
+function Context:DefineStaticPoints()
+    local entryName = "@EntryPoint";
+    self:DefineNode(entryName, nop);
+    self.EntryPoint = self:CreateRuntimeNodeByName(entryName);
+
+    local exitName = "@ExitPoint";
+    self:DefineNode(exitName, nop);
+    self.ExitPoint = self:CreateRuntimeNodeByName(exitName);
+end
+
+function Context:GetEntryPoint()
+    return self.EntryPoint;
+end
+
+function Context:GetExitPoint()
+    return self.ExitPoint;
+end
+
+---@param name string
+---@param closure function
+---@return LibSchematicNode node
+function Context:DefineNode(name, closure)
+    local node = CreateObject(Node, self);
+    node:SetName(name);
+    node:SetClosure(closure);
+    self.Nodes[name] = node;
+    return node;
+end
+
+---@param name string
+function Context:CreateRuntimeNodeByName(name)
+    local node = self.Nodes[name];
+    assert(node, "Node with name " .. name .. " not found");
+
+    local runtimeNode = CreateObject(RuntimeNode, node);
+    tinsert(self.Canvas, runtimeNode);
+    return runtimeNode;
+end
+
+---@param firstNode LibSchematicRuntimeNode
+---@param secondNode LibSchematicRuntimeNode
+function Context:CreateLink(firstNode, secondNode)
+    firstNode:SetOutNode(secondNode);
+    secondNode:SetInNode(firstNode);
+end
+
+---@param output LibSchematicRuntimeNodeOutput
+---@param input LibSchematicRuntimeNodeInput
+function Context:CreateIOLink(output, input)
+    output:AddDestination(input);
+    input:SetSource(output);
+end
+
+------------
+--- Public API
+
+---@type LibSchematicContext[]
+local Contexts = {};
+
+---@param contextName string
+---@return LibSchematicContext context
+function LibSchematic.CreateContext(contextName)
+    assert(not Contexts[contextName], format("Context with the name '%s' already exists", contextName));
+
+    local context = CreateObject(Context, contextName);
+    return context;
+end
+
+---@param contextName string
+---@return LibSchematicContext? context
+function LibSchematic.GetContextByName(contextName)
+    return Contexts[contextName];
+end
+
+--[[ example usage
+
+-- pre-runtime setup
+
+-- define context
+local Context = LibSchematic.CreateContext("MyContext");
+
+do -- define a Multiply function
+    local function Multiply(a, b)
+        return a * b;
+    end
+    local node = Context:DefineNode("Multiply", Multiply);
+    node:SetStatic(true);
+
+    node:CreateInput("A", "number");
+    node:CreateInput("B", "number");
+    node:CreateOutput("Result", "number");
+end
+
+--- runtime
+
+-- when the user drags a node onto the canvas
+local runtimeNodeA = Context:CreateRuntimeNodeByName("Multiply");
+local runtimeNodeB = Context:CreateRuntimeNodeByName("Multiply");
+
+-- when the user connects a node to another
+Context:CreateLink(runtimeNodeA, runtimeNodeB);
+
+-- when the user connects an output to an input
+local outputIndex = 1;
+local inputIndex = 1;
+local output = runtimeNodeA:GetOutputs()[outputIndex];
+local input = runtimeNodeB:GetInputs()[inputIndex];
+Context:CreateIOLink(output, input);
+
+-- when it's time to evaluate
+local results = Context:Eval();
+]]
+
