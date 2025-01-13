@@ -15,7 +15,7 @@ local function CreateObject(object, ...)
 end
 
 ------------
---- INPUTS AND OUTPUTS
+--- INPUTS
 
 ---@class LibSchematicNodeInput
 local NodeInput = {};
